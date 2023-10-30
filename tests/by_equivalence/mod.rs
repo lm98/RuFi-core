@@ -1,7 +1,7 @@
 use crate::utils::{assert_equivalence, fully_connected_topology_map};
 use rand::Rng;
-use rufi_core::lang::{foldhood, mid, nbr, rep};
-use rufi_core::vm::round_vm::RoundVM;
+use rf_core::lang::{foldhood, mid, nbr, rep};
+use rf_core::vm::round_vm::RoundVM;
 use std::collections::HashMap;
 
 struct Fixture {
@@ -26,8 +26,8 @@ impl Fixture {
 mod macros {
     use crate::by_equivalence::Fixture;
     use crate::utils::assert_equivalence;
-    use rufi_core::lang::{mid, nbr};
-    use rufi_core::{mid, nbr};
+    use rf_core::lang::{mid, nbr};
+    use rf_core::{mid, nbr};
 
     #[test]
     fn macros() {

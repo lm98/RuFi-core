@@ -1,9 +1,9 @@
-use rufi_core::context::Context;
-use rufi_core::export::Export;
-use rufi_core::lang::execution::round;
-use rufi_core::path::Path;
-use rufi_core::sensor_id::SensorId;
-use rufi_core::vm::round_vm::RoundVM;
+use rf_core::context::Context;
+use rf_core::export::Export;
+use rf_core::lang::execution::round;
+use rf_core::path::Path;
+use rf_core::sensor_id::SensorId;
+use rf_core::vm::round_vm::RoundVM;
 use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
