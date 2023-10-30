@@ -191,8 +191,10 @@ mod sede {
                     (key_str, value.clone().to_string())
                 } else if let Some(value) = value.downcast_ref::<String>() {
                     (key_str, value.clone())
+                } else if let Some(value) = value.downcast_ref::<f64>() {
+                    (key_str, value.clone().to_string())
                 } else {
-                    panic!("Cannot serialize type {:?}", value)
+                    panic!("Cannot serialize type")
                 }
             })
             .collect();
