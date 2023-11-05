@@ -80,52 +80,28 @@ impl Export {
     ///
     /// The value at the given Path.
     pub fn get<A: 'static + FromStr + Clone>(&self, path: &Path) -> Result<A> {
-        let get_result = self.map
-            .get(path)
-            .ok_or::<String>("No value at the given Path".into());
-            /*.and_then(|value| {
-                value
-                    .downcast_ref::<A>()
-                    .ok_or("Cannot downcast value".into())
-            })*/
+        let get_result: Result<&A> = self.get_from_map::<A>(path);
 
         match get_result {
             Ok(any_val) => {
-                let to_downcast: Result<&A> = any_val.downcast_ref::<A>().ok_or("Cannot downcast".into());
-                Ok(to_downcast?.clone())
+                Ok(any_val.clone())
             },
             _ => {
                 // get deserialized value
-                let str_result = self.get::<String>(path);
+                let str_result = self.get_from_map::<String>(path);
                 str_result?.parse::<A>().map_err(|_| "Cannot parse".into())
             }
         }
     }
 
-    /// Returns the value at the given Path, deserializing it from a String.
-    /// This method is needed to retrieve a value from a deserialized Export.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - The Path where to get the value.
-    ///
-    /// # Generic Parameters
-    ///
-    /// * `A` - The type of the value to get  to return. It must have a `'static` lifetime.
-    ///
-    /// # Returns
-    ///
-    /// The deserialized value at the given Path.
-    ///
-    /// # Panics
-    /// * Panics if there is not a value at the given Path.
-    pub fn get_deserialized<A>(&self, path: &Path) -> Result<A>
+    fn get_from_map<A>(&self, path: &Path) -> Result<&A>
     where
-        A: FromStr,
+        A: 'static + FromStr + Clone,
     {
-        /*let value_str = self.get::<String>(path).unwrap();
-        A::from_str(&*value_str).map_err(|_| "Cannot deserialize value".into())*/
-        todo!()
+        self.map
+            .get(path)
+            .and_then(|value| value.downcast_ref::<A>())
+            .ok_or("No value at the given Path".into())
     }
 
     /// Obtain the root value.
