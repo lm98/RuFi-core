@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use crate::vm::round_vm::RoundVM;
+use std::str::FromStr;
 
 pub fn round<A: Clone + 'static + FromStr>(
     vm: RoundVM,

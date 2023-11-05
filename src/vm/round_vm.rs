@@ -1,10 +1,10 @@
-use std::str::FromStr;
 use crate::context::Context;
 use crate::export::{Export, Result};
 use crate::path::Path;
 use crate::sensor_id::SensorId;
 use crate::slot::Slot;
 use crate::vm::vm_status::VMStatus;
+use std::str::FromStr;
 
 /// A Round correspond to a local computation in a device. Create the context, evaluate the aggregate program and share the exports to the neighborhood.
 ///
@@ -112,10 +112,8 @@ impl RoundVM {
     ///
     ///  An `Option` containing the value of the current path for the current neighbor, if present.
     pub fn neighbor_val<A: 'static + Clone + FromStr>(&self) -> Result<A> {
-        let n: Result<i32> = self.neighbor()
-            .ok_or("Isolated".into());
+        let n: Result<i32> = self.neighbor().ok_or("Isolated".into());
         self.context.read_export_value::<A>(&n?, &self.status.path)
-
     }
 
     /// Obtain the local value of a given sensor.

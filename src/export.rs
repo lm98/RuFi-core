@@ -9,6 +9,7 @@ use std::rc::Rc;
 use std::str::FromStr;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 /// Abstraction for the result of local computation.
 /// It is an AST decorated with the computation value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,9 +84,7 @@ impl Export {
         let get_result: Result<&A> = self.get_from_map::<A>(path);
 
         match get_result {
-            Ok(any_val) => {
-                Ok(any_val.clone())
-            },
+            Ok(any_val) => Ok(any_val.clone()),
             _ => {
                 // get deserialized value
                 let str_result = self.get_from_map::<String>(path);
@@ -260,8 +259,9 @@ mod tests {
     #[test]
     fn test_get_none() {
         let export = export!((path!(Rep(0), Nbr(0)), 10));
-        assert!(
-            export.get::<String>(&Path::from(vec![Rep(0), Nbr(0)])).is_err());
+        assert!(export
+            .get::<String>(&Path::from(vec![Rep(0), Nbr(0)]))
+            .is_err());
     }
 
     #[test]

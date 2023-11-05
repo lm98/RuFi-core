@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use crate::slot::Slot::{Branch, FoldHood, Nbr, Rep};
 use crate::vm::round_vm::RoundVM;
+use std::str::FromStr;
 
 pub mod builtins;
 pub mod execution;
@@ -111,7 +111,9 @@ where
     let temp_vec: Vec<A> = Vec::new();
     let (vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init.clone());
     let (mut vm___, res) = isolate(vm__, |vm_| {
-        let val = nbrs_vec.iter().fold(local_init.clone(), |x, y| aggr(x, y.clone()));
+        let val = nbrs_vec
+            .iter()
+            .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
         (vm_, val)
     });
     let res_ = vm___.nest_write(true, res);
