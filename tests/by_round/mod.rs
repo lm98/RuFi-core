@@ -341,7 +341,7 @@ fn test_sense() {
 
     let (_, res) = round(init_with_ctx(ctx()), |vm| {
         let val = vm.local_sense::<&str>(&sensor("b")).cloned().unwrap();
-        (vm, val)
+        (vm, val.to_string())
     });
     assert_eq!("right", res);
 }
