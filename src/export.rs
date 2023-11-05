@@ -336,8 +336,6 @@ mod tests {
             (Path::new(), 10)
         ];
         let export_ser = serde_json::to_string(&export).unwrap();
-        // this deserialized export will have string representations of the values of the original map
-        // thus we need to parse the values of the deserialized export to get the actual values
         let export_des: Export = serde_json::from_str(&export_ser).unwrap();
         let value_at_nbr = export.get::<i32>(&path!(Nbr(0))).unwrap();
         let value_at_nbr_des = export_des.get::<i32>(&path!(Nbr(0))).unwrap();
