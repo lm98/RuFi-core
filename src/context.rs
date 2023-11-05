@@ -1,9 +1,10 @@
-use crate::export::Export;
+use crate::export::{Export, Result};
 use crate::path::Path;
 use crate::sensor_id::SensorId;
 use std::any::Any;
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::str::FromStr;
 
 /// # Context implementation
 ///
@@ -76,8 +77,11 @@ impl Context {
     /// # Returns
     ///
     /// An `Option` of the value if it exists
-    pub fn read_export_value<A: 'static>(&self, id: &i32, path: &Path) -> Option<&A> {
-        self.exports.get(id).and_then(|export| export.get(path))
+    pub fn read_export_value<A: 'static + FromStr + Clone>(&self, id: &i32, path: &Path) -> Result<A> {
+        self.exports
+            .get(id)
+            .ok_or("Export not found".into())
+            .and_then(|export| export.get(path))
     }
 
     /// Get the value of the given sensor.
@@ -166,10 +170,10 @@ mod test {
             context
                 .read_export_value::<i32>(&0, &path!(Rep(0), Nbr(0)))
                 .unwrap(),
-            &10
+            10
         );
-        assert_eq!(context.read_export_value::<i32>(&1, &Path::new()), None);
-        assert_eq!(context.read_export_value::<i32>(&0, &Path::new()), None);
+        assert!(context.read_export_value::<i32>(&1, &Path::new()).is_err());
+        assert!(context.read_export_value::<i32>(&0, &Path::new()).is_err());
     }
 
     #[test]

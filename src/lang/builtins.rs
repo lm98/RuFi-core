@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::lang::{foldhood, mid, nbr};
 use crate::vm::round_vm::RoundVM;
 
@@ -47,7 +48,7 @@ where
 /// # Returns
 ///
 /// the aggregated value
-pub fn foldhood_plus<A: Copy + 'static, F, G, H>(
+pub fn foldhood_plus<A: Copy + 'static + FromStr, F, G, H>(
     vm: RoundVM,
     init: F,
     aggr: G,
