@@ -185,10 +185,11 @@ impl RoundVM {
     pub fn nest_write<A: Clone + 'static + FromStr>(&mut self, write: bool, value: A) -> A {
         if write {
             let cloned_path = self.status.path.clone();
-            match self.export_data().get::<A>(&cloned_path) {
-                Ok(x) => x.clone(),
-                _ => self.export_data().put(cloned_path, || value.clone()),
-            }
+            self
+                .export_data()
+                .get::<A>(&cloned_path)
+                .unwrap_or(self.export_data().put(cloned_path, || value.clone()))
+                .clone()
         } else {
             value
         }
