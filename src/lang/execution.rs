@@ -1,6 +1,7 @@
+use std::str::FromStr;
 use crate::vm::round_vm::RoundVM;
 
-pub fn round<A: Copy + 'static>(
+pub fn round<A: Copy + 'static + FromStr>(
     vm: RoundVM,
     program: impl Fn(RoundVM) -> (RoundVM, A),
 ) -> (RoundVM, A) {

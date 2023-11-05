@@ -1,5 +1,6 @@
+use std::str::FromStr;
 use crate::context::Context;
-use crate::export::Export;
+use crate::export::{Export, Result};
 use crate::path::Path;
 use crate::sensor_id::SensorId;
 use crate::slot::Slot;
@@ -95,7 +96,7 @@ impl RoundVM {
     /// # Returns
     ///
     /// An `Option` containing the value of the current path for the current device, if present.
-    pub fn previous_round_val<A: 'static + Clone>(&self) -> Option<&A> {
+    pub fn previous_round_val<A: 'static + Clone + FromStr>(&self) -> Result<A> {
         self.context
             .read_export_value::<A>(&self.self_id(), &self.status.path)
     }
@@ -110,10 +111,11 @@ impl RoundVM {
     /// # Returns
     ///
     ///  An `Option` containing the value of the current path for the current neighbor, if present.
-    pub fn neighbor_val<A: 'static + Clone>(&self) -> Option<&A> {
-        self.neighbor()
-            .map(|id| self.context.read_export_value::<A>(&id, &self.status.path))
-            .flatten()
+    pub fn neighbor_val<A: 'static + Clone + FromStr>(&self) -> Result<A> {
+        let n: Result<i32> = self.neighbor()
+            .ok_or("Isolated".into());
+        self.context.read_export_value::<A>(&n?, &self.status.path)
+
     }
 
     /// Obtain the local value of a given sensor.
@@ -182,11 +184,11 @@ impl RoundVM {
         self.status = self.status.push().nest(slot)
     }
 
-    pub fn nest_write<A: Copy + 'static>(&mut self, write: bool, value: A) -> A {
+    pub fn nest_write<A: Copy + 'static + FromStr>(&mut self, write: bool, value: A) -> A {
         if write {
             let cloned_path = self.status.path.clone();
             match self.export_data().get::<A>(&cloned_path) {
-                Some(x) => x.clone(),
+                Ok(x) => x.clone(),
                 _ => self.export_data().put(cloned_path, || value),
             }
         } else {
@@ -206,7 +208,7 @@ impl RoundVM {
     /// # Returns
     ///
     /// A vector of aligned neighbor identifiers.
-    pub fn aligned_neighbours<A: 'static>(&self) -> Vec<i32> {
+    pub fn aligned_neighbours<A: 'static + FromStr + Clone>(&self) -> Vec<i32> {
         let mut tmp: Vec<i32> = Vec::new();
         if !self.isolated {
             tmp = self
@@ -216,7 +218,7 @@ impl RoundVM {
                 .into_iter()
                 .filter(|(id, _)| id != &self.self_id())
                 .filter(|(_, export)| {
-                    self.status.path.is_root() || export.get::<A>(&self.status.path).is_some()
+                    self.status.path.is_root() || export.get::<A>(&self.status.path).is_ok()
                 })
                 .map(|(id, _)| id.clone())
                 .collect();
@@ -333,14 +335,14 @@ mod tests {
     #[test]
     fn test_export_data() {
         let mut vm = round_vm_builder();
-        assert_eq!(vm.export_data().root::<i32>(), &0)
+        assert_eq!(vm.export_data().root::<i32>(), 0)
     }
 
     #[test]
     fn test_register_root() {
         let mut vm = round_vm_builder();
         vm.register_root(expr());
-        assert_eq!(vm.export_data().root::<i32>(), &expr())
+        assert_eq!(vm.export_data().root::<i32>(), expr())
     }
 
     #[test]
@@ -355,14 +357,14 @@ mod tests {
     fn test_previous_round_val() {
         let mut vm = round_vm_builder();
         vm.status.path = Path::from(vec![Rep(0), Nbr(0)]);
-        assert_eq!(vm.previous_round_val::<i32>().unwrap(), &10)
+        assert_eq!(vm.previous_round_val::<i32>().unwrap(), 10)
     }
 
     #[test]
     fn test_neighbor_val() {
         let mut vm = round_vm_builder();
         vm.status.path = Path::from(vec![Rep(0), Nbr(0)]);
-        assert_eq!(vm.neighbor_val::<i32>().unwrap(), &2)
+        assert_eq!(vm.neighbor_val::<i32>().unwrap(), 2)
     }
 
     #[test]

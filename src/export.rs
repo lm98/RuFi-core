@@ -8,6 +8,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::rc::Rc;
 use std::str::FromStr;
 
+pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 /// Abstraction for the result of local computation.
 /// It is an AST decorated with the computation value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,10 +79,27 @@ impl Export {
     /// # Returns
     ///
     /// The value at the given Path.
-    pub fn get<A: 'static>(&self, path: &Path) -> Option<&A> {
-        self.map
+    pub fn get<A: 'static + FromStr + Clone>(&self, path: &Path) -> Result<A> {
+        let get_result = self.map
             .get(path)
-            .and_then(|value| value.downcast_ref::<A>())
+            .ok_or::<String>("No value at the given Path".into());
+            /*.and_then(|value| {
+                value
+                    .downcast_ref::<A>()
+                    .ok_or("Cannot downcast value".into())
+            })*/
+
+        match get_result {
+            Ok(any_val) => {
+                let to_downcast: Result<&A> = any_val.downcast_ref::<A>().ok_or("Cannot downcast".into());
+                Ok(to_downcast?.clone())
+            },
+            _ => {
+                // get deserialized value
+                let str_result = self.get::<String>(path);
+                str_result?.parse::<A>().map_err(|_| "Cannot parse".into())
+            }
+        }
     }
 
     /// Returns the value at the given Path, deserializing it from a String.
@@ -101,12 +119,13 @@ impl Export {
     ///
     /// # Panics
     /// * Panics if there is not a value at the given Path.
-    pub fn get_deserialized<A>(&self, path: &Path) -> Result<A, <A as FromStr>::Err>
+    pub fn get_deserialized<A>(&self, path: &Path) -> Result<A>
     where
         A: FromStr,
     {
-        let value_str = self.get::<String>(path).unwrap();
-        A::from_str(value_str)
+        /*let value_str = self.get::<String>(path).unwrap();
+        A::from_str(&*value_str).map_err(|_| "Cannot deserialize value".into())*/
+        todo!()
     }
 
     /// Obtain the root value.
@@ -122,7 +141,7 @@ impl Export {
     /// # Panics
     /// * Panics if there is not a root value (a value at the empty Path).
     /// * Panics if the type of the root value is not the same as the type of the requested value.
-    pub fn root<A: 'static>(&self) -> &A {
+    pub fn root<A: 'static + FromStr + Clone>(&self) -> A {
         self.get(&Path::new()).unwrap()
     }
 
@@ -140,11 +159,12 @@ impl Export {
     /// # Panics
     /// * Panics if there is not a root value (a value at the empty Path).
     /// * Panics if the type of the root value is not the same as the type of the requested value.
-    pub fn root_deserialized<A>(&self) -> Result<A, <A as FromStr>::Err>
+    pub fn root_deserialized<A>(&self) -> Result<A>
     where
         A: FromStr,
     {
-        self.get_deserialized(&Path::new())
+        //self.get_deserialized(&Path::new())
+        todo!()
     }
 
     /// Returns the HashMap of the Export.
@@ -279,30 +299,28 @@ mod tests {
             export
                 .get::<i32>(&Path::from(vec![Rep(0), Nbr(0)]))
                 .unwrap(),
-            &10
+            10
         );
     }
 
     #[test]
     fn test_get_none() {
         let export = export!((path!(Rep(0), Nbr(0)), 10));
-        assert_eq!(
-            export.get::<String>(&Path::from(vec![Rep(0), Nbr(0)])),
-            None
-        );
+        assert!(
+            export.get::<String>(&Path::from(vec![Rep(0), Nbr(0)])).is_err());
     }
 
     #[test]
     fn test_root() {
         let export = export!((Path::new(), 10));
-        assert_eq!(export.root::<i32>(), &10);
+        assert_eq!(export.root::<i32>(), 10);
     }
 
     #[test]
     #[should_panic]
     fn test_root_panic() {
         let export = export!((Path::new(), 10));
-        assert_eq!(export.root::<String>(), &"foo");
+        assert_eq!(export.root::<String>(), "foo");
     }
 
     #[test]
@@ -317,8 +335,8 @@ mod tests {
     fn test_empty_state() {
         let export: Export = Export::new();
         let path = path!(Nbr(0), Rep(0));
-        assert_eq!(export.get::<i32>(&Path::new()), None);
-        assert_eq!(export.get::<i32>(&path), None);
+        assert!(export.get::<i32>(&Path::new()).is_err());
+        assert!(export.get::<i32>(&path).is_err());
     }
 
     #[test]
@@ -330,8 +348,8 @@ mod tests {
             export.root::<String>()
         );
         assert_eq!(
-            export.get::<String>(&Path::new()),
-            Some(&String::from("foo"))
+            export.get::<String>(&Path::new()).unwrap(),
+            "foo".to_string()
         );
     }
 
@@ -340,7 +358,7 @@ mod tests {
         let mut export: Export = Export::new();
         let path = path!(Nbr(0), Rep(0));
         export.put(path.clone(), || String::from("bar"));
-        assert_eq!(export.get::<String>(&path).unwrap(), &String::from("bar"));
+        assert_eq!(export.get::<String>(&path).unwrap(), String::from("bar"));
     }
 
     #[test]
@@ -348,11 +366,11 @@ mod tests {
         let mut export: Export = Export::new();
         export.put(Path::new(), || String::from("foo"));
         assert_eq!(
-            export.get::<String>(&Path::new()),
-            Some(&String::from("foo"))
+            export.get::<String>(&Path::new()).unwrap(),
+            "foo".to_string()
         );
         export.put(Path::new(), || 77);
-        assert_eq!(export.get::<i32>(&Path::new()).unwrap(), &77);
+        assert_eq!(export.get::<i32>(&Path::new()).unwrap(), 77);
     }
 
     #[test]
@@ -368,10 +386,10 @@ mod tests {
         // thus we need to parse the values of the deserialized export to get the actual values
         let export_des: Export = serde_json::from_str(&export_ser).unwrap();
         let value_at_nbr = export.get::<i32>(&path!(Nbr(0))).unwrap();
-        let value_at_nbr_des = export_des.get_deserialized::<i32>(&path!(Nbr(0))).unwrap();
-        assert_eq!(value_at_nbr, &value_at_nbr_des);
+        let value_at_nbr_des = export_des.get::<i32>(&path!(Nbr(0))).unwrap();
+        assert_eq!(value_at_nbr, value_at_nbr_des);
         let root_value = export.root::<i32>();
-        let root_value_des = export_des.root_deserialized::<i32>().unwrap();
-        assert_eq!(root_value, &root_value_des);
+        let root_value_des = export_des.root::<i32>();
+        assert_eq!(root_value, root_value_des);
     }
 }
