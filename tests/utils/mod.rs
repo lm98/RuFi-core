@@ -8,6 +8,7 @@ use std::any::Any;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::rc::Rc;
+use std::str::FromStr;
 
 pub fn init_vm() -> RoundVM {
     let context = Context::new(
@@ -63,7 +64,7 @@ pub fn assert_equivalence<A, F, G>(
 where
     F: Fn(RoundVM) -> (RoundVM, A) + Copy,
     G: Fn(RoundVM) -> (RoundVM, A) + Copy,
-    A: Eq + Copy + 'static + Debug,
+    A: Eq + Clone + 'static + Debug + FromStr,
 {
     let states: HashMap<i32, (RoundVM, RoundVM)> = nbrs
         .iter()
@@ -97,7 +98,7 @@ fn assert_equivalence_rec<A, F, G>(
 where
     F: Fn(RoundVM) -> (RoundVM, A) + Copy,
     G: Fn(RoundVM) -> (RoundVM, A) + Copy,
-    A: Eq + Copy + 'static + Debug,
+    A: Eq + Clone + 'static + Debug + FromStr,
 {
     if exec_order.is_empty() {
         return true;
