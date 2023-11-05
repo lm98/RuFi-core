@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use crate::lang::{foldhood, mid, nbr};
 use crate::vm::round_vm::RoundVM;
+use std::str::FromStr;
 
 /// Evaluates the given expressions and returns the result based on the given condition.
 /// N.B both th and el will be evaluated, thus they will both affect the [Path], but only the result of one of them will be returned.

@@ -77,7 +77,11 @@ impl Context {
     /// # Returns
     ///
     /// An `Option` of the value if it exists
-    pub fn read_export_value<A: 'static + FromStr + Clone>(&self, id: &i32, path: &Path) -> Result<A> {
+    pub fn read_export_value<A: 'static + FromStr + Clone>(
+        &self,
+        id: &i32,
+        path: &Path,
+    ) -> Result<A> {
         self.exports
             .get(id)
             .ok_or("Export not found".into())
