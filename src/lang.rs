@@ -21,7 +21,7 @@ pub mod macros;
 /// # Returns
 ///
 /// the value of the expression
-pub fn nbr<A: Copy + 'static + FromStr, F>(mut vm: RoundVM, expr: F) -> (RoundVM, A)
+pub fn nbr<A: Clone + 'static + FromStr, F>(mut vm: RoundVM, expr: F) -> (RoundVM, A)
 where
     F: Fn(RoundVM) -> (RoundVM, A),
 {
@@ -55,7 +55,7 @@ where
 /// # Returns
 ///
 /// the updated value
-pub fn rep<A: Copy + 'static + FromStr, F, G>(mut vm: RoundVM, init: F, fun: G) -> (RoundVM, A)
+pub fn rep<A: Clone + 'static + FromStr, F, G>(mut vm: RoundVM, init: F, fun: G) -> (RoundVM, A)
 where
     F: Fn(RoundVM) -> (RoundVM, A),
     G: Fn(RoundVM, A) -> (RoundVM, A),
@@ -94,7 +94,7 @@ where
 /// # Returns
 ///
 /// the aggregated value
-pub fn foldhood<A: Copy + 'static + FromStr, F, G, H>(
+pub fn foldhood<A: Clone + 'static + FromStr, F, G, H>(
     mut vm: RoundVM,
     init: F,
     aggr: G,
@@ -109,9 +109,9 @@ where
     let nbrs = vm.aligned_neighbours::<A>().clone();
     let (vm_, local_init) = locally(vm, |vm_| init(vm_));
     let temp_vec: Vec<A> = Vec::new();
-    let (vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init);
+    let (vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init.clone());
     let (mut vm___, res) = isolate(vm__, |vm_| {
-        let val = nbrs_vec.iter().fold(local_init, |x, y| aggr(x, y.clone()));
+        let val = nbrs_vec.iter().fold(local_init.clone(), |x, y| aggr(x, y.clone()));
         (vm_, val)
     });
     let res_ = vm___.nest_write(true, res);
@@ -120,7 +120,7 @@ where
 }
 
 /// A utility function used by the `foldhood` function.
-fn nbrs_computation<A: Copy + 'static>(
+fn nbrs_computation<A: Clone + 'static>(
     vm: RoundVM,
     expr: impl Fn(RoundVM) -> (RoundVM, A),
     mut tmp: Vec<A>,
@@ -132,7 +132,7 @@ fn nbrs_computation<A: Copy + 'static>(
     } else {
         let current_id = ids.pop();
         let (vm_, res, expr_) = folded_eval(vm, expr, current_id);
-        tmp.push(res.unwrap_or(init).clone());
+        tmp.push(res.unwrap_or(init.clone()).clone());
         nbrs_computation(vm_, expr_, tmp, ids, init)
     }
 }
@@ -155,7 +155,7 @@ fn nbrs_computation<A: Copy + 'static>(
 /// # Returns
 ///
 /// the value of the expression
-pub fn branch<A: Copy + 'static + FromStr, B, TH, EL>(
+pub fn branch<A: Clone + 'static + FromStr, B, TH, EL>(
     mut vm: RoundVM,
     cond: B,
     thn: TH,
@@ -214,7 +214,7 @@ pub fn mid(vm: RoundVM) -> (RoundVM, i32) {
 /// # Returns
 ///
 /// The result of the closure `expr`.
-fn locally<A: Copy + 'static>(
+fn locally<A: Clone + 'static>(
     mut vm: RoundVM,
     expr: impl Fn(RoundVM) -> (RoundVM, A),
 ) -> (RoundVM, A) {
@@ -225,7 +225,7 @@ fn locally<A: Copy + 'static>(
     (vm_, result)
 }
 
-fn isolate<A: Copy + 'static, F>(mut vm: RoundVM, expr: F) -> (RoundVM, A)
+fn isolate<A: Clone + 'static, F>(mut vm: RoundVM, expr: F) -> (RoundVM, A)
 where
     F: Fn(RoundVM) -> (RoundVM, A),
 {
@@ -253,7 +253,7 @@ where
 /// # Returns
 ///
 /// A tuple of type `(RoundVM, Option<A>, F)`.
-fn folded_eval<A: Copy + 'static, F>(
+fn folded_eval<A: Clone + 'static, F>(
     mut vm: RoundVM,
     expr: F,
     id: Option<i32>,
