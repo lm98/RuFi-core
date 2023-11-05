@@ -121,28 +121,6 @@ impl Export {
         self.get(&Path::new()).unwrap()
     }
 
-    /// Obtain the root value, deserializing it from a String.
-    /// This method is needed to retrieve a value from a deserialized Export.
-    ///
-    /// # Generic Parameters
-    ///
-    /// * `A` - The type of the value to return. It must have a `'static` lifetime.
-    ///
-    /// # Returns
-    ///
-    /// The deserialized root value.
-    ///
-    /// # Panics
-    /// * Panics if there is not a root value (a value at the empty Path).
-    /// * Panics if the type of the root value is not the same as the type of the requested value.
-    pub fn root_deserialized<A>(&self) -> Result<A>
-    where
-        A: FromStr,
-    {
-        //self.get_deserialized(&Path::new())
-        todo!()
-    }
-
     /// Returns the HashMap of the Export.
     ///
     /// # Returns
