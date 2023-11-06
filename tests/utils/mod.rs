@@ -28,7 +28,7 @@ pub fn init_with_ctx(ctx: Context) -> RoundVM {
 
 pub fn push_to_ctx<A: Copy + 'static>(mut ctx: Context, path: Path, val: A) -> Context {
     let mut export = Export::new();
-    export.put(path, || val);
+    export.put(path,val);
     ctx.put_export(ctx.self_id, export);
     ctx
 }

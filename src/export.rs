@@ -54,17 +54,8 @@ impl Export {
     /// # Generic Parameters
     ///
     /// * `A` - The type of the value to insert. It must have a `'static` lifetime.
-    /// * `F` - The type of the function to insert.
-    ///
-    /// # Returns
-    ///
-    /// The inserted value.
-    pub fn put<A: 'static, F>(&mut self, path: Path, value: F) -> A
-    where
-        F: Fn() -> A,
-    {
-        self.map.insert(path, Rc::new(Box::new(value())));
-        value()
+    pub fn put<A: 'static>(&mut self, path: Path, value: A) {
+        self.map.insert(path, Rc::new(Box::new(value)));
     }
 
     /// Returns the value at the given Path.
@@ -239,8 +230,8 @@ mod tests {
     #[test]
     fn test_put() {
         let mut export = export!((path!(Rep(0)), 10));
-        export.put(path!(Rep(0), Nbr(0)), || 20);
-        export.put(Path::from(vec![Nbr(0)]), || "foo");
+        export.put(path!(Rep(0), Nbr(0)), 20);
+        export.put(Path::from(vec![Nbr(0)]),"foo");
         assert_eq!(export.paths().len(), 3);
     }
 
@@ -296,7 +287,7 @@ mod tests {
     #[test]
     fn test_root_path() {
         let mut export: Export = Export::new();
-        export.put(Path::new(), || String::from("foo"));
+        export.put(Path::new(), String::from("foo"));
         assert_eq!(
             export.get::<String>(&Path::new()).unwrap(),
             export.root::<String>()
@@ -311,19 +302,19 @@ mod tests {
     fn test_non_root_path() {
         let mut export: Export = Export::new();
         let path = path!(Nbr(0), Rep(0));
-        export.put(path.clone(), || String::from("bar"));
+        export.put(path.clone(), String::from("bar"));
         assert_eq!(export.get::<String>(&path).unwrap(), String::from("bar"));
     }
 
     #[test]
     fn test_overwriting_with_different_type() {
         let mut export: Export = Export::new();
-        export.put(Path::new(), || String::from("foo"));
+        export.put(Path::new(),String::from("foo"));
         assert_eq!(
             export.get::<String>(&Path::new()).unwrap(),
             "foo".to_string()
         );
-        export.put(Path::new(), || 77);
+        export.put(Path::new(),77);
         assert_eq!(export.get::<i32>(&Path::new()).unwrap(), 77);
     }
 
