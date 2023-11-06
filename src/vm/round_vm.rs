@@ -67,7 +67,7 @@ impl RoundVM {
     /// * `A` - The type of value. It must implement the `Copy` trait
     ///         and have a `'static` lifetime.
     pub fn register_root<A: 'static + Clone>(&mut self, v: A) {
-        self.export_data().put(Path::new(), || v.clone());
+        self.export_data().put(Path::new(), v.clone());
     }
 
     /// If the computation is folding on a neighbor, return the id of the neighbor
@@ -188,7 +188,7 @@ impl RoundVM {
             self
                 .export_data()
                 .get::<A>(&cloned_path)
-                .unwrap_or(self.export_data().put(cloned_path, || value.clone()))
+                .unwrap_or({self.export_data().put(cloned_path,value.clone()) ; value.clone()})
                 .clone()
         } else {
             value
