@@ -8,6 +8,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::rc::Rc;
 use std::str::FromStr;
 
+/// Represents the Result of a query made to the Export.
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// Abstraction for the result of local computation.
@@ -137,7 +138,8 @@ impl Export {
             .ok_or("No value at the given Path".into())
     }
 
-    /// Obtain the root value.
+    /// Obtain the root value. This function may panic, so it is preferable to use the non-panicking
+    /// counterpart [Export::root_as_result]
     ///
     /// # Generic Parameters
     ///
@@ -152,6 +154,19 @@ impl Export {
     /// * Panics if the type of the root value is not the same as the type of the requested value.
     pub fn root<A: 'static + FromStr + Clone>(&self) -> A {
         self.get(&Path::new()).unwrap()
+    }
+
+    /// Obtain the root value. This method is the non-panicking version of [Export::root]
+    ///
+    /// # Generic Parameters
+    ///
+    /// * `A` - The type of the value to return. It must have a `'static` lifetime.
+    ///
+    /// # Returns
+    ///
+    /// A Result containing the root value if present and an error otherwise.
+    pub fn root_as_result<A: 'static + FromStr + Clone>(&self) -> Result<A> {
+        self.get(&Path::new())
     }
 
     /// Returns the HashMap of the Export.
