@@ -188,7 +188,7 @@ impl RoundVM {
             self
                 .export_data()
                 .get::<A>(&cloned_path)
-                .unwrap_or({self.export_data().put(cloned_path,value.clone()) ; value.clone()})
+                .unwrap_or(self.export_data().put_lazy_and_return(cloned_path,|| value.clone()))
                 .clone()
         } else {
             value
