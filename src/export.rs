@@ -18,7 +18,7 @@ pub struct Export {
         serialize_with = "serialize_rc_box_any_map",
         deserialize_with = "deserialize_rc_box_any_map"
     )]
-    pub(crate) map: HashMap<Path, Rc<Box<dyn Any>>>,
+    map: HashMap<Path, Rc<Box<dyn Any>>>,
 }
 
 #[macro_export]
@@ -56,6 +56,49 @@ impl Export {
     /// * `A` - The type of the value to insert. It must have a `'static` lifetime.
     pub fn put<A: 'static>(&mut self, path: Path, value: A) {
         self.map.insert(path, Rc::new(Box::new(value)));
+    }
+
+    /// Inserts a value in the Export at the given Path. The value is calculated from the provided
+    /// function.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The Path where to insert the value.
+    /// * `fun` - The function from which we calculate the value to insert.
+    ///
+    /// # Generic Parameters
+    ///
+    /// * `A` - The type of the value to insert. It must have a `'static` lifetime.
+    /// * `F` - The type of the function from which the value is calculated.
+    pub fn put_lazy<A: 'static, F>(&mut self, path: Path, fun: F)
+    where F: FnOnce() -> A,
+    {
+        let value = fun();
+        self.put(path, value);
+    }
+
+    /// Inserts a value in the Export at the given Path. The value is calculated from the provided
+    /// function and then returned to the caller.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The Path where to insert the value.
+    /// * `fun` - The function from which we calculate the value to insert.
+    ///
+    /// # Generic Parameters
+    ///
+    /// * `A` - The type of the value to insert. It must have a `'static` lifetime.
+    /// * `F` - The type of the function from which the value is calculated.
+    ///
+    /// # Returns
+    ///
+    /// The calculated value.
+    pub fn put_lazy_and_return<A: 'static + Clone, F>(&mut self, path: Path, fun: F) -> A
+        where F: FnOnce() -> A,
+    {
+        let value = fun();
+        self.put(path, value.clone());
+        value
     }
 
     /// Returns the value at the given Path.
