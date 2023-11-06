@@ -27,7 +27,7 @@ where
 {
     vm.nest_in(Nbr(vm.index().clone()));
     let (mut vm_, val) = match vm.neighbor() {
-        Some(nbr) if nbr.clone() != vm.self_id() => match vm.neighbor_val::<A>() {
+        Some(nbr) if nbr != vm.self_id() => match vm.neighbor_val::<A>() {
             Ok(val) => (vm.clone(), val.clone()),
             _ => expr(vm.clone()),
         },
@@ -171,7 +171,7 @@ where
     vm.nest_in(Branch(vm.index().clone()));
     let (vm, tag) = locally(vm, |_vm1| (_vm1, cond()));
     let (mut vm_, val): (RoundVM, A) = match vm.neighbor() {
-        Some(nbr) if nbr.clone() != vm.self_id() => {
+        Some(nbr) if nbr != vm.self_id() => {
             let val_clone = vm.neighbor_val::<A>().unwrap().clone();
             (vm, val_clone)
         }

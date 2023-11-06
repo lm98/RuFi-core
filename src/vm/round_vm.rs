@@ -52,8 +52,8 @@ impl RoundVM {
     /// # Returns
     ///
     /// The id of the device, of type `i32`.
-    pub fn self_id(&self) -> i32 {
-        self.context.self_id
+    pub fn self_id(&self) -> &i32 {
+        self.context.self_id()
     }
 
     /// Register the given value for the root path.
@@ -212,10 +212,10 @@ impl RoundVM {
         if !self.isolated {
             tmp = self
                 .context
-                .exports
+                .exports()
                 .clone()
                 .into_iter()
-                .filter(|(id, _)| id != &self.self_id())
+                .filter(|(id, _)| id != self.self_id())
                 .filter(|(_, export)| {
                     self.status.path.is_root() || export.get::<A>(&self.status.path).is_ok()
                 })
@@ -259,7 +259,7 @@ impl RoundVM {
     /// - `false` if folding is being performed on neighbor.
     pub fn unless_folding_on_others(&self) -> bool {
         match self.neighbor() {
-            Some(neighbor) => neighbor == &self.self_id(),
+            Some(neighbor) => neighbor == self.self_id(),
             None => true,
         }
     }
@@ -272,7 +272,7 @@ impl RoundVM {
     /// - `false` otherwise.
     pub fn only_when_folding_on_self(&self) -> bool {
         match self.neighbor() {
-            Some(neighbor) => neighbor == &self.self_id(),
+            Some(neighbor) => neighbor == self.self_id(),
             _ => false,
         }
     }

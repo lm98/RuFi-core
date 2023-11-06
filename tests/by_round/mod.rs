@@ -244,7 +244,7 @@ fn test_nbr() {
             |a, b| (a + b),
             |vm1| {
                 let (vm2, res) = nbr(vm1, |vm3| mid(vm3));
-                if res == vm2.self_id() {
+                if res == vm2.self_id().clone() {
                     (vm2, 0)
                 } else {
                     (vm2, 1)

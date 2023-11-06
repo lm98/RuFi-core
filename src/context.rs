@@ -17,10 +17,10 @@ use std::str::FromStr;
 /// * `exports` All the export that are available to the device.
 #[derive(Debug, Clone)]
 pub struct Context {
-    pub self_id: i32,
-    pub local_sensor: HashMap<SensorId, Rc<Box<dyn Any>>>,
-    pub nbr_sensor: HashMap<SensorId, HashMap<i32, Rc<Box<dyn Any>>>>,
-    pub exports: HashMap<i32, Export>,
+    self_id: i32,
+    local_sensor: HashMap<SensorId, Rc<Box<dyn Any>>>,
+    nbr_sensor: HashMap<SensorId, HashMap<i32, Rc<Box<dyn Any>>>>,
+    exports: HashMap<i32, Export>,
 }
 
 impl Context {
@@ -51,6 +51,14 @@ impl Context {
             nbr_sensor,
             exports,
         }
+    }
+
+    pub fn self_id(&self) -> &i32 {
+        &self.self_id
+    }
+
+    pub fn exports(&self) -> &HashMap<i32, Export> {
+        &self.exports
     }
 
     /// Add an export of a device to the context.
@@ -88,6 +96,10 @@ impl Context {
             .and_then(|export| export.get(path))
     }
 
+    pub fn local_sensors(&self) -> &HashMap<SensorId, Rc<Box<dyn Any>>> {
+        &self.local_sensor
+    }
+
     /// Get the value of the given sensor.
     ///
     /// # Arguments
@@ -104,6 +116,10 @@ impl Context {
         self.local_sensor
             .get(local_sensor_id)
             .and_then(|value| value.downcast_ref::<A>())
+    }
+
+    pub fn nbr_sensors(&self) -> &HashMap<SensorId, HashMap<i32, Rc<Box<dyn Any>>>> {
+        &self.nbr_sensor
     }
 
     /// Get the value of the given sensor for the given neighbor.
