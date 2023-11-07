@@ -31,7 +31,6 @@ impl VMStatus {
         }
     }
 
-
     /// # Returns
     ///
     /// The current [Path].

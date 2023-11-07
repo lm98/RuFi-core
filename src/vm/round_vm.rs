@@ -152,7 +152,6 @@ impl RoundVM {
             .flatten()
     }
 
-
     /// Evaluates the given expression locally and return the result.
     ///
     /// # Arguments
@@ -213,10 +212,12 @@ impl RoundVM {
     pub fn nest_write<A: Clone + 'static + FromStr>(&mut self, write: bool, value: A) -> A {
         if write {
             let cloned_path = self.status.path().clone();
-            self
-                .export_data()
+            self.export_data()
                 .get::<A>(&cloned_path)
-                .unwrap_or(self.export_data().put_lazy_and_return(cloned_path,|| value.clone()))
+                .unwrap_or(
+                    self.export_data()
+                        .put_lazy_and_return(cloned_path, || value.clone()),
+                )
                 .clone()
         } else {
             value
@@ -315,143 +316,143 @@ impl RoundVM {
 
 #[cfg(test)]
 mod tests {
-use crate::context::Context;
-use crate::export;
-use crate::export::Export;
-use crate::path;
-use crate::path::Path;
-use crate::sensor_id::{sensor, SensorId};
-use crate::slot::Slot::{Nbr, Rep};
-use crate::vm::round_vm::RoundVM;
-use crate::vm::vm_status::VMStatus;
-use std::any::Any;
-use std::collections::HashMap;
-use std::rc::Rc;
-fn round_vm_builder() -> RoundVM {
-    let local_sensor =
-        HashMap::from([(sensor("sensor1"), Rc::new(Box::new(10) as Box<dyn Any>))]);
-    let nbr_sensor = HashMap::from([(
-        sensor("sensor1"),
-        HashMap::from([(0, Rc::new(Box::new(4) as Box<dyn Any>))]),
-    )]);
-    let exports = HashMap::from([
-        (
-            7,
-            /*Export::from(HashMap::from([(
-                Path::from(vec![Rep(0), Nbr(0)]),
-                Box::new(10) as Box<dyn Any>,
-            )]))*/
-            export!((path!(Nbr(0), Rep(0)), 10)),
-        ),
-        (
-            0,
-            /*Export::from(HashMap::from([(
-                Path::from(vec![Rep(0), Nbr(0)]),
-                Box::new(2) as Box<dyn Any>,
-            )]))*/
-            export!((path!(Nbr(0), Rep(0)), 2)),
-        ),
-    ]);
+    use crate::context::Context;
+    use crate::export;
+    use crate::export::Export;
+    use crate::path;
+    use crate::path::Path;
+    use crate::sensor_id::{sensor, SensorId};
+    use crate::slot::Slot::{Nbr, Rep};
+    use crate::vm::round_vm::RoundVM;
+    use crate::vm::vm_status::VMStatus;
+    use std::any::Any;
+    use std::collections::HashMap;
+    use std::rc::Rc;
+    fn round_vm_builder() -> RoundVM {
+        let local_sensor =
+            HashMap::from([(sensor("sensor1"), Rc::new(Box::new(10) as Box<dyn Any>))]);
+        let nbr_sensor = HashMap::from([(
+            sensor("sensor1"),
+            HashMap::from([(0, Rc::new(Box::new(4) as Box<dyn Any>))]),
+        )]);
+        let exports = HashMap::from([
+            (
+                7,
+                /*Export::from(HashMap::from([(
+                    Path::from(vec![Rep(0), Nbr(0)]),
+                    Box::new(10) as Box<dyn Any>,
+                )]))*/
+                export!((path!(Nbr(0), Rep(0)), 10)),
+            ),
+            (
+                0,
+                /*Export::from(HashMap::from([(
+                    Path::from(vec![Rep(0), Nbr(0)]),
+                    Box::new(2) as Box<dyn Any>,
+                )]))*/
+                export!((path!(Nbr(0), Rep(0)), 2)),
+            ),
+        ]);
 
-    let context = Context::new(7, local_sensor, nbr_sensor, exports);
-    let mut vm = RoundVM::new(context);
-    vm.export_stack.push(export!((Path::new(), 0)));
-    let status = VMStatus::new();
-    vm.status = status.fold_into(Some(0));
-    vm
-}
+        let context = Context::new(7, local_sensor, nbr_sensor, exports);
+        let mut vm = RoundVM::new(context);
+        vm.export_stack.push(export!((Path::new(), 0)));
+        let status = VMStatus::new();
+        vm.status = status.fold_into(Some(0));
+        vm
+    }
 
-fn expr(vm: RoundVM) -> (RoundVM, i32) {
-    (vm, 5 * 3)
-}
+    fn expr(vm: RoundVM) -> (RoundVM, i32) {
+        (vm, 5 * 3)
+    }
 
-#[test]
-fn test_export_data() {
-    let mut vm = round_vm_builder();
-    assert_eq!(vm.export_data().root::<i32>(), 0)
-}
+    #[test]
+    fn test_export_data() {
+        let mut vm = round_vm_builder();
+        assert_eq!(vm.export_data().root::<i32>(), 0)
+    }
 
-#[test]
-fn test_register_root() {
-    let mut vm = round_vm_builder();
-    vm.register_root(5 * 3);
-    assert_eq!(vm.export_data().root::<i32>(), 15)
-}
+    #[test]
+    fn test_register_root() {
+        let mut vm = round_vm_builder();
+        vm.register_root(5 * 3);
+        assert_eq!(vm.export_data().root::<i32>(), 15)
+    }
 
-#[test]
-fn test_folded_eval() {
-    let mut vm = round_vm_builder();
-    let result = vm.folded_eval(expr, 7);
-    assert_eq!(round_vm_builder().status, vm.status);
-    assert_eq!(result.1.unwrap(), 15)
-}
+    #[test]
+    fn test_folded_eval() {
+        let mut vm = round_vm_builder();
+        let result = vm.folded_eval(expr, 7);
+        assert_eq!(round_vm_builder().status, vm.status);
+        assert_eq!(result.1.unwrap(), 15)
+    }
 
-#[test]
-fn test_previous_round_val() {
-    let mut vm = round_vm_builder();
-    vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
-    assert_eq!(vm.previous_round_val::<i32>().unwrap(), 10)
-}
+    #[test]
+    fn test_previous_round_val() {
+        let mut vm = round_vm_builder();
+        vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
+        assert_eq!(vm.previous_round_val::<i32>().unwrap(), 10)
+    }
 
-#[test]
-fn test_neighbor_val() {
-    let mut vm = round_vm_builder();
-    vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
-    assert_eq!(vm.neighbor_val::<i32>().unwrap(), 2)
-}
+    #[test]
+    fn test_neighbor_val() {
+        let mut vm = round_vm_builder();
+        vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
+        assert_eq!(vm.neighbor_val::<i32>().unwrap(), 2)
+    }
 
-#[test]
-fn test_local_sense() {
-    let vm = round_vm_builder();
-    assert_eq!(
-        vm.local_sense::<i32>(&SensorId::new("sensor1".to_string()))
-            .unwrap(),
-        &10
-    )
-}
+    #[test]
+    fn test_local_sense() {
+        let vm = round_vm_builder();
+        assert_eq!(
+            vm.local_sense::<i32>(&SensorId::new("sensor1".to_string()))
+                .unwrap(),
+            &10
+        )
+    }
 
-#[test]
-fn test_nbr_sense() {
-    let vm = round_vm_builder();
-    assert_eq!(
-        vm.nbr_sense::<i32>(&SensorId::new("sensor1".to_string()))
-            .unwrap(),
-        &4
-    )
-}
+    #[test]
+    fn test_nbr_sense() {
+        let vm = round_vm_builder();
+        assert_eq!(
+            vm.nbr_sense::<i32>(&SensorId::new("sensor1".to_string()))
+                .unwrap(),
+            &4
+        )
+    }
 
-#[test]
-fn test_aligned_neighbours() {
-    let vm = round_vm_builder();
-    assert_eq!(vm.aligned_neighbours::<i32>(), vec![7, 0])
-}
+    #[test]
+    fn test_aligned_neighbours() {
+        let vm = round_vm_builder();
+        assert_eq!(vm.aligned_neighbours::<i32>(), vec![7, 0])
+    }
 
-#[test]
-fn test_isolate() {
-    let mut vm = round_vm_builder();
-    let was_isolated = vm.isolated.clone();
-    let result = vm.isolate(|vm| (vm, 5 * 3));
-    assert_eq!(vm.isolated, was_isolated);
-    assert_eq!(result.1, 15)
-}
+    #[test]
+    fn test_isolate() {
+        let mut vm = round_vm_builder();
+        let was_isolated = vm.isolated.clone();
+        let result = vm.isolate(|vm| (vm, 5 * 3));
+        assert_eq!(vm.isolated, was_isolated);
+        assert_eq!(result.1, 15)
+    }
 
-#[test]
-fn test_unless_folding_on_others() {
-    let mut vm = round_vm_builder();
-    assert!(!vm.unless_folding_on_others());
-    vm.status = vm.status.fold_into(None);
-    assert!(vm.unless_folding_on_others());
-    vm.status = vm.status.fold_into(Some(7)) ;
-    assert!(vm.unless_folding_on_others());
-}
+    #[test]
+    fn test_unless_folding_on_others() {
+        let mut vm = round_vm_builder();
+        assert!(!vm.unless_folding_on_others());
+        vm.status = vm.status.fold_into(None);
+        assert!(vm.unless_folding_on_others());
+        vm.status = vm.status.fold_into(Some(7));
+        assert!(vm.unless_folding_on_others());
+    }
 
-#[test]
-fn test_only_when_folding_on_self() {
-    let mut vm = round_vm_builder();
-    assert!(!vm.only_when_folding_on_self());
-    vm.status = vm.status.fold_into(None);
-    assert!(!vm.only_when_folding_on_self());
-    vm.status = vm.status.fold_into(Some(7));
-    assert!(vm.only_when_folding_on_self());
-}
+    #[test]
+    fn test_only_when_folding_on_self() {
+        let mut vm = round_vm_builder();
+        assert!(!vm.only_when_folding_on_self());
+        vm.status = vm.status.fold_into(None);
+        assert!(!vm.only_when_folding_on_self());
+        vm.status = vm.status.fold_into(Some(7));
+        assert!(vm.only_when_folding_on_self());
+    }
 }
