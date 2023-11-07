@@ -76,14 +76,14 @@ impl RoundVM {
     ///
     /// An `&Option<i32>` containing the id of the neighbor, if present
     pub fn neighbor(&self) -> &Option<i32> {
-        &self.status.neighbour
+        self.status.neighbour()
     }
 
     /// # Returns
     ///
     ///  The index of the current computation.
-    pub fn index(&self) -> &i32 {
-        &self.status.index
+    pub fn index(&self) -> i32 {
+        self.status.index()
     }
 
     /// Obtain the value of the previous round for the current device and the current path.
@@ -98,7 +98,7 @@ impl RoundVM {
     /// An `Option` containing the value of the current path for the current device, if present.
     pub fn previous_round_val<A: 'static + Clone + FromStr>(&self) -> Result<A> {
         self.context
-            .read_export_value::<A>(&self.self_id(), &self.status.path)
+            .read_export_value::<A>(&self.self_id(), self.status.path())
     }
 
     /// Obtain the value of the current path for the current neighbor
@@ -113,7 +113,7 @@ impl RoundVM {
     ///  An `Option` containing the value of the current path for the current neighbor, if present.
     pub fn neighbor_val<A: 'static + Clone + FromStr>(&self) -> Result<A> {
         let n: Result<i32> = self.neighbor().ok_or("Isolated".into());
-        self.context.read_export_value::<A>(&n?, &self.status.path)
+        self.context.read_export_value::<A>(&n?, self.status.path())
     }
 
     /// Obtain the local value of a given sensor.
@@ -184,7 +184,7 @@ impl RoundVM {
 
     pub fn nest_write<A: Clone + 'static + FromStr>(&mut self, write: bool, value: A) -> A {
         if write {
-            let cloned_path = self.status.path.clone();
+            let cloned_path = self.status.path().clone();
             self
                 .export_data()
                 .get::<A>(&cloned_path)
@@ -217,7 +217,7 @@ impl RoundVM {
                 .into_iter()
                 .filter(|(id, _)| id != self.self_id())
                 .filter(|(_, export)| {
-                    self.status.path.is_root() || export.get::<A>(&self.status.path).is_ok()
+                    self.status.path().is_root() || export.get::<A>(self.status.path()).is_ok()
                 })
                 .map(|(id, _)| id.clone())
                 .collect();
@@ -321,9 +321,8 @@ mod tests {
         let context = Context::new(7, local_sensor, nbr_sensor, exports);
         let mut vm = RoundVM::new(context);
         vm.export_stack.push(export!((Path::new(), 0)));
-        let mut status = VMStatus::new();
-        status.neighbour = Some(0);
-        vm.status = status;
+        let status = VMStatus::new();
+        vm.status = status.fold_into(Some(0));
         vm
     }
 
@@ -355,14 +354,14 @@ mod tests {
     #[test]
     fn test_previous_round_val() {
         let mut vm = round_vm_builder();
-        vm.status.path = Path::from(vec![Rep(0), Nbr(0)]);
+        vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
         assert_eq!(vm.previous_round_val::<i32>().unwrap(), 10)
     }
 
     #[test]
     fn test_neighbor_val() {
         let mut vm = round_vm_builder();
-        vm.status.path = Path::from(vec![Rep(0), Nbr(0)]);
+        vm.status = vm.status.nest(Rep(0)).nest(Nbr(0));
         assert_eq!(vm.neighbor_val::<i32>().unwrap(), 2)
     }
 
@@ -405,9 +404,9 @@ mod tests {
     fn test_unless_folding_on_others() {
         let mut vm = round_vm_builder();
         assert!(!vm.unless_folding_on_others());
-        vm.status.neighbour = None;
+        vm.status = vm.status.fold_into(None);
         assert!(vm.unless_folding_on_others());
-        vm.status.neighbour = Some(7);
+        vm.status = vm.status.fold_into(Some(7)) ;
         assert!(vm.unless_folding_on_others());
     }
 
@@ -415,9 +414,9 @@ mod tests {
     fn test_only_when_folding_on_self() {
         let mut vm = round_vm_builder();
         assert!(!vm.only_when_folding_on_self());
-        vm.status.neighbour = None;
+        vm.status = vm.status.fold_into(None);
         assert!(!vm.only_when_folding_on_self());
-        vm.status.neighbour = Some(7);
+        vm.status = vm.status.fold_into(Some(7));
         assert!(vm.only_when_folding_on_self());
     }
 }

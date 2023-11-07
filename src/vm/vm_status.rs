@@ -10,10 +10,10 @@ use std::collections::LinkedList;
 /// * `stack` - Stack that contains the list of the statuses
 #[derive(Debug, PartialEq, Clone)]
 pub struct VMStatus {
-    pub(crate) path: Path,
-    pub(crate) index: i32,
-    pub(crate) neighbour: Option<i32>,
-    pub(crate) stack: LinkedList<(Path, i32, Option<i32>)>,
+    path: Path,
+    index: i32,
+    neighbour: Option<i32>,
+    stack: LinkedList<(Path, i32, Option<i32>)>,
 }
 
 impl VMStatus {
@@ -31,6 +31,35 @@ impl VMStatus {
         }
     }
 
+
+    /// # Returns
+    ///
+    /// The current [Path].
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    /// # Returns
+    ///
+    /// The current index.
+    pub fn index(&self) -> i32 {
+        self.index
+    }
+
+    /// # Returns
+    ///
+    /// The current neighbour.
+    pub fn neighbour(&self) -> &Option<i32> {
+        &self.neighbour
+    }
+
+    /// # Returns
+    ///
+    /// The stack of statuses.
+    pub fn stack(&self) -> &LinkedList<(Path, i32, Option<i32>)> {
+        &self.stack
+    }
+
     /// Whether the VM is folding or not.
     ///
     /// # Returns
@@ -40,7 +69,7 @@ impl VMStatus {
         self.neighbour.is_some()
     }
 
-    /// Fold the current slot into the given neighbour.
+    /// Fold into the given neighbour.
     ///
     /// # Arguments
     /// * `neighbour` he id of the neighbour.
