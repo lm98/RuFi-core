@@ -17,7 +17,7 @@ use std::str::FromStr;
 pub struct RoundVM {
     pub context: Context,
     status: VMStatus,
-    pub export_stack: Vec<Export>,
+    export_stack: Vec<Export>,
     isolated: bool,
 }
 
@@ -304,6 +304,12 @@ impl RoundVM {
             Some(neighbor) => neighbor == self.self_id(),
             _ => false,
         }
+    }
+
+    /// Create a new export stack with an empty [Export]. This function needs to be called when a new
+    /// [RoundVM] is created.
+    pub fn new_export_stack(&mut self) {
+        self.export_stack.push(Export::new())
     }
 }
 

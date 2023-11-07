@@ -22,7 +22,7 @@ pub fn init_vm() -> RoundVM {
 
 pub fn init_with_ctx(ctx: Context) -> RoundVM {
     let mut vm = RoundVM::new(ctx);
-    vm.export_stack.push(Export::new());
+    vm.new_export_stack();
     vm
 }
 
