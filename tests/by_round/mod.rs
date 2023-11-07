@@ -31,7 +31,7 @@ fn test_multiple_rounds() {
     let (vm_, res) = round(vm, program);
     assert_eq!(1, res);
     //add to the context the result of the previous round
-    let ctx_ = push_to_ctx(vm_.context, Path::from(vec![Rep(0)]), res);
+    let ctx_ = push_to_ctx(vm_.context().clone(), Path::from(vec![Rep(0)]), res);
     //second round
     let (_vm__, res_) = round(init_with_ctx(ctx_), program);
     assert_eq!(2, res_);
