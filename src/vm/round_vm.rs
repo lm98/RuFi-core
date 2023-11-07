@@ -15,7 +15,7 @@ use std::str::FromStr;
 /// * `export_stack` - The stack of exports of the current round.
 #[derive(Debug, Clone)]
 pub struct RoundVM {
-    pub context: Context,
+    context: Context,
     status: VMStatus,
     export_stack: Vec<Export>,
     isolated: bool,
@@ -305,6 +305,10 @@ impl RoundVM {
             Some(neighbor) => neighbor == self.self_id(),
             _ => false,
         }
+    }
+
+    pub fn context(&self) -> &Context {
+        &self.context
     }
 
     /// Create a new export stack with an empty [Export]. This function needs to be called when a new
