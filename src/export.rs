@@ -72,7 +72,8 @@ impl Export {
     /// * `A` - The type of the value to insert. It must have a `'static` lifetime.
     /// * `F` - The type of the function from which the value is calculated.
     pub fn put_lazy<A: 'static, F>(&mut self, path: Path, fun: F)
-    where F: FnOnce() -> A,
+    where
+        F: FnOnce() -> A,
     {
         let value = fun();
         self.put(path, value);
@@ -95,7 +96,8 @@ impl Export {
     ///
     /// The calculated value.
     pub fn put_lazy_and_return<A: 'static + Clone, F>(&mut self, path: Path, fun: F) -> A
-        where F: FnOnce() -> A,
+    where
+        F: FnOnce() -> A,
     {
         let value = fun();
         self.put(path, value.clone());
@@ -289,7 +291,7 @@ mod tests {
     fn test_put() {
         let mut export = export!((path!(Rep(0)), 10));
         export.put(path!(Rep(0), Nbr(0)), 20);
-        export.put(Path::from(vec![Nbr(0)]),"foo");
+        export.put(Path::from(vec![Nbr(0)]), "foo");
         assert_eq!(export.paths().len(), 3);
     }
 
@@ -367,12 +369,12 @@ mod tests {
     #[test]
     fn test_overwriting_with_different_type() {
         let mut export: Export = Export::new();
-        export.put(Path::new(),String::from("foo"));
+        export.put(Path::new(), String::from("foo"));
         assert_eq!(
             export.get::<String>(&Path::new()).unwrap(),
             "foo".to_string()
         );
-        export.put(Path::new(),77);
+        export.put(Path::new(), 77);
         assert_eq!(export.get::<i32>(&Path::new()).unwrap(), 77);
     }
 
