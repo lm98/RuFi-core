@@ -61,7 +61,7 @@ where
     G: Fn(RoundVM, A) -> (RoundVM, A),
 {
     vm.nest_in(Rep(vm.index().clone()));
-    let (mut vm_, val) = locally(vm, |vm1| {
+    let (mut vm_, val) = vm.locally(|vm1| {
         if vm1.previous_round_val::<A>().is_ok() {
             let prev = vm1.previous_round_val::<A>().unwrap().clone();
             fun(vm1, prev)
@@ -107,10 +107,10 @@ where
 {
     vm.nest_in(FoldHood(vm.index().clone()));
     let nbrs = vm.aligned_neighbours::<A>().clone();
-    let (vm_, local_init) = locally(vm, |vm_| init(vm_));
+    let (vm_, local_init) = vm.locally(|vm_| init(vm_));
     let temp_vec: Vec<A> = Vec::new();
-    let (vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init.clone());
-    let (mut vm___, res) = isolate(vm__, |vm_| {
+    let (mut vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init.clone());
+    let (mut vm___, res) = vm__.isolate(|vm_| {
         let val = nbrs_vec
             .iter()
             .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
@@ -122,20 +122,23 @@ where
 }
 
 /// A utility function used by the `foldhood` function.
-fn nbrs_computation<A: Clone + 'static>(
-    vm: RoundVM,
-    expr: impl Fn(RoundVM) -> (RoundVM, A),
+fn nbrs_computation<A: Clone + 'static, F>(
+    mut vm: RoundVM,
+    expr: F,
     mut tmp: Vec<A>,
     mut ids: Vec<i32>,
     init: A,
-) -> (RoundVM, Vec<A>) {
+) -> (RoundVM, Vec<A>)
+where
+    F: Fn(RoundVM) -> (RoundVM, A) + Copy,
+{
     if ids.len() == 0 {
         return (vm, tmp);
     } else {
         let current_id = ids.pop();
-        let (vm_, res, expr_) = folded_eval(vm, expr, current_id);
+        let (vm_, res) = vm.folded_eval(expr, current_id.unwrap());
         tmp.push(res.unwrap_or(init.clone()).clone());
-        nbrs_computation(vm_, expr_, tmp, ids, init)
+        nbrs_computation(vm_, expr, tmp, ids, init)
     }
 }
 
@@ -169,7 +172,7 @@ where
     EL: Fn(RoundVM) -> (RoundVM, A),
 {
     vm.nest_in(Branch(vm.index().clone()));
-    let (vm, tag) = locally(vm, |_vm1| (_vm1, cond()));
+    let (mut vm, tag) = vm.locally(|_vm1| (_vm1, cond()));
     let (mut vm_, val): (RoundVM, A) = match vm.neighbor() {
         Some(nbr) if nbr != vm.self_id() => {
             let val_clone = vm.neighbor_val::<A>().unwrap().clone();
@@ -177,9 +180,11 @@ where
         }
         _ => {
             if tag {
-                locally(vm, |vm1| thn(vm1))
+                //locally(vm, thn);
+                vm.locally(thn)
             } else {
-                locally(vm, |vm1| els(vm1))
+                //locally(vm, els)
+                vm.locally(els)
             }
         }
     };
@@ -200,72 +205,4 @@ where
 pub fn mid(vm: RoundVM) -> (RoundVM, i32) {
     let mid = vm.self_id().clone();
     (vm, mid)
-}
-
-/// Evaluates the given expression locally and return the result.
-///
-/// # Arguments
-///
-/// * `expr` The expression to evaluate.
-///
-/// # Generic Parameters
-///
-/// * `A` - The type of value returned by the expression.
-/// * `F` - The type of the closure, which must be a mutable closure that takes no arguments and returns a value of type `A`.
-///
-/// # Returns
-///
-/// The result of the closure `expr`.
-fn locally<A: Clone + 'static>(
-    mut vm: RoundVM,
-    expr: impl Fn(RoundVM) -> (RoundVM, A),
-) -> (RoundVM, A) {
-    let current_neighbour = vm.neighbor().map(|id| id.clone());
-    vm.status = vm.status.fold_out();
-    let (mut vm_, result) = expr(vm);
-    vm_.status = vm_.status.fold_into(current_neighbour);
-    (vm_, result)
-}
-
-fn isolate<A: Clone + 'static, F>(mut vm: RoundVM, expr: F) -> (RoundVM, A)
-where
-    F: Fn(RoundVM) -> (RoundVM, A),
-{
-    vm.status = vm.status.fold_out();
-    let (mut vm_, result) = expr(vm);
-    vm_.status = vm_.status.fold_into(None);
-    (vm_, result)
-}
-
-/// Perform a folded evaluation of the given expression in the given neighbor and return the result.
-/// Used by the `foldhood` function.
-/// Same behavior as the folded_eval function in src/core/lang/round_vm.rs.
-///
-/// # Arguments
-///
-/// * `vm` - The current VM.
-/// * `expr` - The expression to evaluate, which should return a value of type `A`.
-/// * `id` - The id of the neighbor. It is of type `i32`.
-///
-/// # Generic Parameters
-///
-/// * `A` - The type of value returned by the expression.
-/// * `F` - The type of the expr, which must be a closure that takes o `RoundVM` as an argument and returns a tuple of type `(RoundVM, A)`.
-///
-/// # Returns
-///
-/// A tuple of type `(RoundVM, Option<A>, F)`.
-fn folded_eval<A: Clone + 'static, F>(
-    mut vm: RoundVM,
-    expr: F,
-    id: Option<i32>,
-) -> (RoundVM, Option<A>, F)
-where
-    F: Fn(RoundVM) -> (RoundVM, A),
-{
-    vm.status = vm.status.push();
-    vm.status = vm.status.fold_into(id);
-    let (mut vm_, res) = expr(vm);
-    vm_.status = vm_.status.pop();
-    (vm_, Some(res), expr)
 }
