@@ -222,7 +222,13 @@ impl RoundVM {
     /// # Returns
     ///
     /// A tuple of `RoundVM` and `A`.
-    pub fn nest<A: Clone + 'static + FromStr, F>(&mut self, slot: Slot, write: bool, inc: bool, expr: F) -> (RoundVM, A)
+    pub fn nest<A: Clone + 'static + FromStr, F>(
+        &mut self,
+        slot: Slot,
+        write: bool,
+        inc: bool,
+        expr: F,
+    ) -> (RoundVM, A)
     where
         F: Fn(RoundVM) -> (RoundVM, A),
     {
@@ -235,7 +241,7 @@ impl RoundVM {
                 .get::<A>(&cloned_path)
                 .unwrap_or(
                     vm.export_data()
-                        .put_lazy_and_return(cloned_path, || val.clone())
+                        .put_lazy_and_return(cloned_path, || val.clone()),
                 )
                 .clone()
         } else {
