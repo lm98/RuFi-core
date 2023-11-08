@@ -205,6 +205,23 @@ impl RoundVM {
         (vm_, Some(result))
     }
 
+    /// Evaluate the given expression while also writing on the [Export] stack.
+    ///
+    /// # Arguments
+    ///
+    /// * `slot` - The slot to write in the current [Path].
+    /// * `write` - A boolean indicating whether to write the result of the expression on the `Export` stack.
+    /// * `inc` - A boolean indicating whether to increment the index of the current [VMStatus].
+    /// * `expr` - The expression to evaluate, which takes a [RoundVM] as argument and returns a tuple of `RoundVM` and `A`.
+    ///
+    /// # Generic Parameters
+    ///
+    /// * `A` - The type of value returned by the expression.
+    /// * `F` - The type of the expression, which must be a closure that takes a [RoundVM] as argument and returns a tuple of `RoundVM` and `A`.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of `RoundVM` and `A`.
     pub fn nest<A: Clone + 'static + FromStr, F>(&mut self, slot: Slot, write: bool, inc: bool, expr: F) -> (RoundVM, A)
     where
         F: Fn(RoundVM) -> (RoundVM, A),
