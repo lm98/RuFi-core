@@ -106,40 +106,16 @@ where
     H: Fn(RoundVM) -> (RoundVM, A) + Copy,
 {
     vm.nest_in(FoldHood(vm.index().clone()));
-    let nbrs = vm.aligned_neighbours::<A>().clone();
-    let (vm_, local_init) = vm.locally(|vm_| init(vm_));
-    let temp_vec: Vec<A> = Vec::new();
-    let (mut vm__, nbrs_vec) = nbrs_computation(vm_, expr, temp_vec, nbrs, local_init.clone());
-    let (mut vm___, res) = vm__.isolate(|vm_| {
-        let val = nbrs_vec
-            .iter()
-            .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
-        (vm_, val)
-    });
-    let res_ = vm___.nest_write(true, res);
-    vm___.nest_out(true);
-    (vm___, res_)
-}
-
-/// A utility function used by the `foldhood` function.
-fn nbrs_computation<A: Clone + 'static, F>(
-    mut vm: RoundVM,
-    expr: F,
-    mut tmp: Vec<A>,
-    mut ids: Vec<i32>,
-    init: A,
-) -> (RoundVM, Vec<A>)
-where
-    F: Fn(RoundVM) -> (RoundVM, A) + Copy,
-{
-    if ids.len() == 0 {
-        return (vm, tmp);
-    } else {
-        let current_id = ids.pop();
-        let (vm_, res) = vm.folded_eval(expr, current_id.unwrap());
-        tmp.push(res.unwrap_or(init.clone()).clone());
-        nbrs_computation(vm_, expr, tmp, ids, init)
-    }
+    let (mut vm_, local_init) = vm.locally(|vm_| init(vm_));
+    let nbr_field: Vec<A> = vm_.aligned_neighbours::<A>().iter().map(|id| {
+        vm_.folded_eval(expr, *id).1.unwrap_or(local_init.clone())
+    }).collect();
+    let res = nbr_field
+        .iter()
+        .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
+    let res_ = vm_.nest_write(true, res);
+    vm_.nest_out(true);
+    (vm_, res_)
 }
 
 /// Partitions the domain into two subspaces that do not interact with each other.
