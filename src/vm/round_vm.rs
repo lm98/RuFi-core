@@ -205,30 +205,30 @@ impl RoundVM {
         (vm_, Some(result))
     }
 
-    pub fn nest_in(&mut self, slot: Slot) {
-        self.status = self.status.push().nest(slot)
-    }
-
-    pub fn nest_write<A: Clone + 'static + FromStr>(&mut self, write: bool, value: A) -> A {
-        if write {
-            let cloned_path = self.status.path().clone();
-            self.export_data()
+    pub fn nest<A: Clone + 'static + FromStr, F>(&mut self, slot: Slot, write: bool, inc: bool, expr: F) -> (RoundVM, A)
+    where
+        F: Fn(RoundVM) -> (RoundVM, A),
+    {
+        let mut proxy = self.clone();
+        proxy.status = proxy.status.push().nest(slot);
+        let (mut vm, val) = expr(proxy);
+        let res = if write {
+            let cloned_path = vm.status.path().clone();
+            vm.export_data()
                 .get::<A>(&cloned_path)
                 .unwrap_or(
-                    self.export_data()
-                        .put_lazy_and_return(cloned_path, || value.clone()),
+                    vm.export_data()
+                        .put_lazy_and_return(cloned_path, || val.clone())
                 )
                 .clone()
         } else {
-            value
-        }
-    }
-
-    pub fn nest_out(&mut self, inc: bool) {
-        self.status = match inc {
-            true => self.status.pop().inc_index(),
-            false => self.status.pop(),
-        }
+            val
+        };
+        vm.status = match inc {
+            true => vm.status.pop().inc_index(),
+            false => vm.status.pop(),
+        };
+        (vm, res)
     }
 
     /// Get a vector of aligned neighbor identifiers.
