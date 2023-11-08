@@ -25,17 +25,15 @@ pub fn nbr<A: Clone + 'static + FromStr, F>(mut vm: RoundVM, expr: F) -> (RoundV
 where
     F: Fn(RoundVM) -> (RoundVM, A),
 {
-    vm.nest_in(Nbr(vm.index().clone()));
-    let (mut vm_, val) = match vm.neighbor() {
-        Some(nbr) if nbr != vm.self_id() => match vm.neighbor_val::<A>() {
-            Ok(val) => (vm.clone(), val.clone()),
-            _ => expr(vm.clone()),
-        },
-        _ => expr(vm),
-    };
-    let res = vm_.nest_write(vm_.unless_folding_on_others(), val);
-    vm_.nest_out(true);
-    (vm_, res)
+    vm.nest(Nbr(vm.index().clone()), vm.unless_folding_on_others(), true, |vm| {
+        match vm.neighbor() {
+            Some(nbr) if nbr != vm.self_id() => match vm.neighbor_val::<A>() {
+                Ok(val) => (vm.clone(), val.clone()),
+                _ => expr(vm.clone()),
+            },
+            _ => expr(vm),
+        }
+    })
 }
 
 /// Iteratively updates the value of the input expression at each device using the last computed value.
@@ -60,19 +58,15 @@ where
     F: Fn(RoundVM) -> (RoundVM, A),
     G: Fn(RoundVM, A) -> (RoundVM, A),
 {
-    vm.nest_in(Rep(vm.index().clone()));
-    let (mut vm_, val) = vm.locally(|vm1| {
-        if vm1.previous_round_val::<A>().is_ok() {
-            let prev = vm1.previous_round_val::<A>().unwrap().clone();
-            fun(vm1, prev)
+    vm.nest(Rep(vm.index().clone()), vm.unless_folding_on_others(), true, |vm| {
+        if vm.previous_round_val::<A>().is_ok() {
+            let prev = vm.previous_round_val::<A>().unwrap().clone();
+            fun(vm, prev)
         } else {
-            let init_args = init(vm1);
+            let init_args = init(vm);
             fun(init_args.0, init_args.1)
         }
-    });
-    let res = vm_.nest_write(vm_.unless_folding_on_others(), val);
-    vm_.nest_out(true);
-    (vm_, res)
+    })
 }
 
 /// Aggregates the results of the neighbor computation.
@@ -105,17 +99,22 @@ where
     G: Fn(A, A) -> A,
     H: Fn(RoundVM) -> (RoundVM, A) + Copy,
 {
-    vm.nest_in(FoldHood(vm.index().clone()));
-    let (mut vm_, local_init) = vm.locally(|vm_| init(vm_));
-    let nbr_field: Vec<A> = vm_.aligned_neighbours::<A>().iter().map(|id| {
-        vm_.folded_eval(expr, *id).1.unwrap_or(local_init.clone())
-    }).collect();
-    let res = nbr_field
-        .iter()
-        .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
-    let res_ = vm_.nest_write(true, res);
-    vm_.nest_out(true);
-    (vm_, res_)
+    vm.nest(
+        FoldHood(vm.index().clone()),
+        true,
+        true,
+        |mut vm| {
+            let (mut vm_, local_init) = vm.locally(|vm_| init(vm_));
+            let nbr_field: Vec<A> = vm_
+                .aligned_neighbours::<A>()
+                .iter()
+                .map(|id| vm_.folded_eval(expr, *id).1.unwrap_or(local_init.clone()))
+                .collect();
+            let res = nbr_field
+                .iter()
+                .fold(local_init.clone(), |x, y| aggr(x, y.clone()));
+            (vm_, res)
+        })
 }
 
 /// Partitions the domain into two subspaces that do not interact with each other.
@@ -147,26 +146,23 @@ where
     TH: Fn(RoundVM) -> (RoundVM, A),
     EL: Fn(RoundVM) -> (RoundVM, A),
 {
-    vm.nest_in(Branch(vm.index().clone()));
-    let (mut vm, tag) = vm.locally(|_vm1| (_vm1, cond()));
-    let (mut vm_, val): (RoundVM, A) = match vm.neighbor() {
-        Some(nbr) if nbr != vm.self_id() => {
-            let val_clone = vm.neighbor_val::<A>().unwrap().clone();
-            (vm, val_clone)
-        }
-        _ => {
-            if tag {
-                //locally(vm, thn);
-                vm.locally(thn)
-            } else {
-                //locally(vm, els)
-                vm.locally(els)
+    vm.nest(Branch(vm.index().clone()), vm.unless_folding_on_others(), true, |mut vm| {
+        let (mut vm_, tag) = vm.locally(|_vm1| (_vm1, cond()));
+        let (vm__, val): (RoundVM, A) = match vm_.neighbor() {
+            Some(nbr) if nbr != vm_.self_id() => {
+                let val_clone = vm_.neighbor_val::<A>().unwrap().clone();
+                (vm_, val_clone)
             }
-        }
-    };
-    let res = vm_.nest_write(vm_.unless_folding_on_others(), val);
-    vm_.nest_out(tag);
-    (vm_, res)
+            _ => {
+                if tag {
+                    vm_.locally(|vm|thn(vm))
+                } else {
+                    vm_.locally(|vm|els(vm))
+                }
+            }
+        };
+        (vm__, val)
+    })
 }
 
 /// Returns the id of the current device.
