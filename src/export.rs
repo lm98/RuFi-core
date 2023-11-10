@@ -187,6 +187,58 @@ impl From<HashMap<Path, Rc<Box<dyn Any>>>> for Export {
     }
 }
 
+impl Display for Export {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let string = serde_json::to_string(&self);
+        write!(f, "{}", string.unwrap())
+    }
+}
+
+impl PartialEq for Export {
+    fn eq(&self, other: &Self) -> bool {
+        let keys__len_equality = if self.map.keys().len() == other.map.keys().len() {
+            true
+        } else {
+            false
+        };
+
+        let values_equality = self
+            .map
+            .iter()
+            .all(|(key, _value)| {
+                if let Ok(value) = self.get::<i32>(key) {
+                    if let Ok(other_value) = other.get::<i32>(key) {
+                        value == other_value
+                    } else {
+                        false
+                    }
+                } else if let Ok(value) = self.get::<bool>(key) {
+                    if let Ok(other_value) = other.get::<bool>(key) {
+                        value == other_value
+                    } else {
+                        false
+                    }
+                } else if let Ok(value) = self.get::<String>(key) {
+                    if let Ok(other_value) = other.get::<String>(key) {
+                        value == other_value
+                    } else {
+                        false
+                    }
+                } else if let Ok(value) = self.get::<f64>(key) {
+                    if let Ok(other_value) = other.get::<f64>(key) {
+                        value == other_value
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            });
+
+        keys__len_equality && values_equality
+    }
+}
+
 /// This private module is needed to serialize and deserialize the HashMap<Path, Rc<Box<dyn Any>>>.
 mod sede {
     use crate::path::Path;
@@ -254,13 +306,6 @@ mod sede {
         D: Deserializer<'de>,
     {
         deserializer.deserialize_map(ExportMapVisitor)
-    }
-}
-
-impl Display for Export {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let string = serde_json::to_string(&self);
-        write!(f, "{}", string.unwrap())
     }
 }
 
@@ -379,6 +424,33 @@ mod tests {
     }
 
     #[test]
+    fn test_put_lazy() {
+        let mut export: Export = Export::new();
+        export.put_lazy(path!(Nbr(0)), || 10);
+        assert_eq!(export.get::<i32>(&path!(Nbr(0))).unwrap(), 10);
+    }
+
+    #[test]
+    fn test_put_lazy_and_return() {
+        let mut export: Export = Export::new();
+        let value = export.put_lazy_and_return(path!(Nbr(0)), || 10);
+        assert_eq!(value, 10);
+        assert_eq!(export.get::<i32>(&path!(Nbr(0))).unwrap(), 10);
+    }
+
+    #[test]
+    fn test_partial_eq() {
+        //assert the equality of two exports
+        let export1 = export!((path!(Rep(0), Nbr(0)), 10));
+        let export2 = export!((path!(Rep(0), Nbr(0)), 10));
+        assert_eq!(export1, export2);
+
+        //assert the inequality of two exports
+        let export3 = export!((path!(Rep(0), Nbr(0)), 100));
+        assert_ne!(export1, export3);
+    }
+
+    #[test]
     fn test_serialize_and_deserialize() {
         let export = export![
             (path!(Rep(0), Nbr(0)), 10),
@@ -388,11 +460,6 @@ mod tests {
         ];
         let export_ser = serde_json::to_string(&export).unwrap();
         let export_des: Export = serde_json::from_str(&export_ser).unwrap();
-        let value_at_nbr = export.get::<i32>(&path!(Nbr(0))).unwrap();
-        let value_at_nbr_des = export_des.get::<i32>(&path!(Nbr(0))).unwrap();
-        assert_eq!(value_at_nbr, value_at_nbr_des);
-        let root_value = export.root::<i32>();
-        let root_value_des = export_des.root::<i32>();
-        assert_eq!(root_value, root_value_des);
+        assert_eq!(export, export_des);
     }
 }
